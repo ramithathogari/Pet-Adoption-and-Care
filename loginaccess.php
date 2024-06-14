@@ -1,9 +1,9 @@
 <?php
 // Start session
-session_start();
 
 // Include database connection
 include 'db_connect.php';
+session_start();
 
 // Check if the form is submitted
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
@@ -11,19 +11,24 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $email = $_POST["email"];
     $password = $_POST["password"];
 
-    // Validate email and password (you may need more validation here)
-    // Query the database to check if the email exists and the password is correct
-    $sql = "SELECT * FROM users WHERE email = '$email'";
-    $result = $conn->query($sql);
+    // Prepare and execute the SQL statement
+    $stmt = $conn->prepare("SELECT id, password FROM users WHERE email = ?");
+    $stmt->bind_param("s", $email);
+    $stmt->execute();
+    $result = $stmt->get_result();
 
     if ($result->num_rows == 1) {
         $row = $result->fetch_assoc();
-        if (password_verify($password, $row['password'])) {
+        $stored_password = $row['password'];
+
+        // Verify the password
+        if (password_verify($password, $stored_password)) {
             // Password is correct, create session and redirect
             $_SESSION['user_id'] = $row['id'];
-            header("Location: ../account.php"); // Redirect to account page
+            header("Location: home.php");
             exit;
-        } else {
+        } 
+        {
             // Password is incorrect
             $error = "Invalid email or password";
         }
@@ -31,6 +36,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // Email does not exist
         $error = "Invalid email or password";
     }
+
+    // Close the statement and connection
+    $stmt->close();
+    $conn->close();
 }
 ?>
-
